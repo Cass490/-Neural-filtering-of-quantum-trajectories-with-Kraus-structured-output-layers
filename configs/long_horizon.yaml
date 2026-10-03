@@ -1,0 +1,99 @@
+# Same data as paper.yaml plus the 10,000-step long-horizon scenario; used only by probe_long_horizon.py.
+project_name: kraus_mlst
+output_root: outputs/mlst
+seeds: [11, 23, 37, 51, 73]
+
+data:
+  root: data/mlst_1q_long
+  workers: 8
+  seed: 202701
+  counts:
+    train: 2000
+    val: 300
+    test: 300
+  simulation:
+    n_qubits: 1
+    steps: 2000
+    dt: 0.005
+    initial_state: random_pure
+    dynamics:
+      omega: [0.5, 4.0]
+      kappa: [0.3, 0.8]
+      eta: [0.8, 1.0]
+      coupling: 0.0
+      amplitude_damping: 0.0
+      extra_dephasing: 0.0
+      switching:
+        n_switches: 1
+        low: 400
+        high: 1600
+        axes: [x, y]
+        resample_kappa: true
+      drift:
+        enabled: false
+      colored_hamiltonian_noise:
+        enabled: false
+    readout_noise:
+      white_std: 0.0
+      ou_std: 0.0
+      ou_theta: 0.5
+  ood_scenarios:
+    long_horizon_10k:
+      count: 100
+      steps: 10000
+      seed_offset: 7
+
+model:
+  rank: 2
+  backbone_cfg:
+    hidden_dim: 128
+    layers: 2
+    dropout: 0.0
+    d_state: 64
+    tcn_layers: 5
+    transformer_layers: 3
+    nhead: 4
+    max_len: 4096
+    ode_dt: 0.05
+    kernel_size: 5
+    gated: true
+    spectral_radius: 0.9
+    leak_rate: 0.5
+    sparsity: 0.9
+  head_cfg:
+    residual_scale: 0.1
+
+training:
+  device: auto
+  deterministic: true
+  epochs: 100
+  window: 256
+  windows_per_trajectory: 2
+  val_windows_per_trajectory: 2
+  batch_size: 32
+  gradient_accumulation: 1
+  num_workers: 0
+  learning_rate: 0.0005
+  weight_decay: 0.01
+  grad_clip: 1.0
+  lr_factor: 0.5
+  lr_patience: 5
+  full_rollout_finetune_epochs: 3
+  full_rollout_train_trajectories: 256
+  full_rollout_val_trajectories: 64
+  full_rollout_batch_size: 4
+  full_rollout_gradient_accumulation: 8
+  full_rollout_learning_rate: 0.0001
+
+evaluation:
+  batch_size: 8
+
+loss:
+  soft_lambdas:
+    trace: 1.0
+    psd: 1.0
+    hermiticity: 0.25
+  choi_tp_lambda: 1.0
+
+aggregation:
+  core_scenario: id

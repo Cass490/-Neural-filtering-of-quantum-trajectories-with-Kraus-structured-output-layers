@@ -1,0 +1,225 @@
+# Full paper experiment suite: data, model, training and the core, soft_sweep and supplementary stages.
+project_name: kraus_mlst
+output_root: outputs/mlst
+seeds: [11, 23, 37, 51, 73]
+
+data:
+  root: data/mlst_1q
+  workers: 8
+  seed: 202701
+  counts:
+    train: 2000
+    val: 300
+    test: 300
+  simulation:
+    n_qubits: 1
+    steps: 2000
+    dt: 0.005
+    initial_state: random_pure
+    dynamics:
+      omega: [0.5, 4.0]
+      kappa: [0.3, 0.8]
+      eta: [0.8, 1.0]
+      coupling: 0.0
+      amplitude_damping: 0.0
+      extra_dephasing: 0.0
+      switching:
+        n_switches: 1
+        low: 400
+        high: 1600
+        axes: [x, y]
+        resample_kappa: true
+      drift:
+        enabled: false
+      colored_hamiltonian_noise:
+        enabled: false
+    readout_noise:
+      white_std: 0.0
+      ou_std: 0.0
+      ou_theta: 0.5
+  ood_scenarios:
+    eta_08:
+      count: 300
+      dynamics:
+        eta: 0.8
+    eta_06:
+      count: 300
+      dynamics:
+        eta: 0.6
+    eta_04:
+      count: 300
+      dynamics:
+        eta: 0.4
+    readout_white:
+      count: 300
+      readout_noise:
+        white_std: 0.75
+    readout_ou:
+      count: 300
+      readout_noise:
+        ou_std: 0.5
+        ou_theta: 0.15
+    slow_parameter_drift:
+      count: 300
+      dynamics:
+        drift:
+          enabled: true
+          theta: 0.25
+          sigma_omega: 0.25
+          sigma_kappa: 0.05
+    colored_hamiltonian_noise:
+      count: 300
+      dynamics:
+        colored_hamiltonian_noise:
+          enabled: true
+          theta: 0.12
+          sigma: 0.35
+    amplitude_damping:
+      count: 300
+      dynamics:
+        amplitude_damping: 0.12
+    extra_dephasing:
+      count: 300
+      dynamics:
+        extra_dephasing: 0.12
+    multiple_switches:
+      count: 300
+      dynamics:
+        switching:
+          n_switches: 3
+          low: 250
+          high: 1750
+          axes: [x, y, z, x]
+          resample_kappa: true
+    fixed_preparation:
+      count: 300
+      initial_state: ground
+
+model:
+  rank: 2
+  backbone_cfg:
+    hidden_dim: 128
+    layers: 2
+    dropout: 0.0
+    d_state: 64
+    tcn_layers: 5
+    transformer_layers: 3
+    nhead: 4
+    max_len: 4096
+    ode_dt: 0.05
+    kernel_size: 5
+    gated: true
+    spectral_radius: 0.9
+    leak_rate: 0.5
+    sparsity: 0.9
+  head_cfg:
+    residual_scale: 0.1
+
+training:
+  device: auto
+  deterministic: true
+  epochs: 100
+  window: 256
+  windows_per_trajectory: 2
+  val_windows_per_trajectory: 2
+  batch_size: 32
+  gradient_accumulation: 1
+  num_workers: 0
+  learning_rate: 0.0005
+  weight_decay: 0.01
+  grad_clip: 1.0
+  lr_factor: 0.5
+  lr_patience: 5
+  full_rollout_finetune_epochs: 3
+  full_rollout_train_trajectories: 256
+  full_rollout_val_trajectories: 64
+  full_rollout_batch_size: 4
+  full_rollout_gradient_accumulation: 8
+  full_rollout_learning_rate: 0.0001
+
+evaluation:
+  batch_size: 8
+
+loss:
+  soft_lambdas:
+    trace: 1.0
+    psd: 1.0
+    hermiticity: 0.25
+  choi_tp_lambda: 1.0
+
+experiments:
+  core:
+    backbones: [tcn, gru, lstm, rnn, esn, ssm]
+    variants: [direct_rho0, recursive, soft, cholesky, choi, kraus]
+    variants_by_backbone:
+      gru: [direct_legacy, direct_rho0, recursive, soft, cholesky, choi, kraus]
+      lstm: [direct_legacy, direct_rho0, recursive, soft, cholesky, choi, kraus]
+      ssm: [direct_legacy, direct_rho0, recursive, soft, cholesky, choi, kraus]
+    ranks: [2]
+    seeds: [11, 23, 37, 51, 73]
+    allow_optional_skip: false
+  soft_sweep:
+    backbones: [gru, lstm, ssm]
+    variants: [soft]
+    ranks: [2]
+    seeds: [11, 23, 37]
+    soft_profiles:
+      weak:
+        soft_lambdas: {trace: 0.1, psd: 0.1, hermiticity: 0.025}
+      strong:
+        soft_lambdas: {trace: 10.0, psd: 10.0, hermiticity: 2.5}
+      very_strong:
+        soft_lambdas: {trace: 100.0, psd: 100.0, hermiticity: 25.0}
+    allow_optional_skip: false
+  supplementary:
+    backbones: [transformer, neural_ode]
+    variants: [direct_rho0]
+    variants_by_backbone:
+      transformer: [direct_rho0, kraus]
+    ranks: [2]
+    seeds: [11, 23, 37, 51, 73]
+    seeds_by_backbone:
+      transformer: [11, 23, 37]
+    training_overrides:
+      transformer:
+        batch_size: 4
+        gradient_accumulation: 8
+        full_rollout_finetune_epochs: 0
+      neural_ode:
+        full_rollout_finetune_epochs: 0
+    allow_optional_skip: false
+
+sme_baselines:
+  scenarios: [id, eta_06, eta_04, slow_parameter_drift, readout_ou, multiple_switches]
+  max_trajectories: 50
+  mismatched:
+    omega: 1.5
+    kappa: 0.5
+    eta: 0.8
+    axis: x
+  adaptive:
+    enabled: true
+    omega_grid: [0.5, 1.5, 3.0, 4.5]
+    kappa_grid: [0.3, 0.55, 0.8]
+    eta: 0.8
+    axes: [x, y, z]
+    transition_mix: 0.005
+    observation_variance_extra: 0.0
+
+benchmark:
+  stages: [core, supplementary]
+  seeds: [11]
+  backbones: [gru, lstm, ssm, neural_ode]
+  variants: [direct_rho0, recursive, soft, cholesky, choi, kraus]
+  batch_sizes: [1, 16, 64]
+  warmup: 5
+  repeats: 20
+
+numerical_audit:
+  stages: [core]
+  seeds: [11]
+  max_trajectories: 8
+
+aggregation:
+  core_scenario: id
+  main_variants: [recursive, soft, cholesky, choi, kraus]
