@@ -1,0 +1,18 @@
+{
+  "title": "Kraus-constrained sequence learning for quantum trajectories",
+  "description": "Research code and reproducibility materials for Kraus/CPTP-constrained neural filtering of continuously measured single-qubit quantum trajectories.",
+  "creators": [
+    {"name": "Priyanshi Singh"},
+    {"name": "Krishna Bhatia"}
+  ],
+  "license": "MIT",
+  "upload_type": "software",
+  "keywords": [
+    "quantum trajectories",
+    "continuous quantum measurement",
+    "Kraus operators",
+    "CPTP maps",
+    "quantum state estimation",
+    "physics-informed machine learning"
+  ]
+}

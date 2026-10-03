@@ -1,0 +1,12 @@
+cff-version: 1.2.0
+title: "Kraus-constrained sequence learning for quantum trajectories"
+type: software
+version: 1.0.0
+date-released: 2026-10-03
+authors:
+  - family-names: Singh
+    given-names: Priyanshi
+  - family-names: Bhatia
+    given-names: Krishna
+message: "If you use this software, please cite the accompanying MLST article and the archived software release."
+license: MIT
